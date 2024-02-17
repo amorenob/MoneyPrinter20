@@ -1,0 +1,22 @@
+TikTokQuesAns01:
+  VIDEO_SIZE: [1080, 1920]
+  VIDEO_DURATION: 10
+  QUEST_DURATION: 10
+  BACKGROUND_IMAGE: "backgrounds/bg_01.jpg"
+  BACKGROUND_AUDIO: "sounds/80s-mystical-stranger-things-133254.mp3"
+  TOP_MARGIN: 100
+  QUEST_FRAME: "frames/question_frame_01.png"
+  QUEST_PADDING: 80
+  ANS_FRAME: "frames/ans_frame_03.png"
+  ANS_FRAME_OPACITY: 0.7
+  ANS_PADDING: 40
+  ANS_LEFT_MARGIN: 140
+  ANS_START_TIME: 0.5
+  FONT: "NimbusRoman-BoldItalic"
+  FONT_SIZE: 80
+  FONT_COLOR: "white"
+  HIGHLIGHT_COLOR: "white"
+  COUNTDOWN_FILE: "countdowns/rot_countdown2.mp4"
+  COUNTDOWN_POSITION: ['center', 1600]
+  VOICE: "en_us_006"
+

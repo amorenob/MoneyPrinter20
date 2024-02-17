@@ -45,7 +45,7 @@ def moveLetters(letters, funcpos):
               for i,letter in enumerate(letters)]
 
 
-def words_effect(txtClip, frame_clip, funcpos, duration=2):
+def words_effect(txtClip, funcpos, duration=2):
     # dic of functions
     functions = {'vortex': vortex, 'cascade': cascade, 'arrive': arrive, 'vortexout': vortexout}
     f = functions[funcpos]
@@ -69,25 +69,46 @@ def fade_in(clip, duration):
 def fade_out(clip, duration):
     return clip.crossfadeout(duration)
 
-def slide_in(clip, frame_clip, duration):
-    # slide in from the left side changing the position
-    #save final position
+def slide_in(clip, duration, direction='left'):
+    """
+    Slide in the given clip from a specified direction over a specified duration.
+
+    Args:
+        clip (VideoClip): The clip to slide in.
+        duration (float): The duration of the slide animation in seconds.
+        direction (str, optional): The direction from which the clip should slide in.
+            Can be one of 'left', 'right', 'up', or 'down'. Defaults to 'left'.
+
+    Returns:
+        VideoClip: The modified clip with the slide animation applied.
+    """
+
+    # save final position
     final_pos = clip.pos(0)
 
-    
-    starting_x = frame_clip.w
-
-    if final_pos[0]=='center':
-        final_x = (frame_clip.w - clip.w)/2
-        t_factor = (frame_clip.w - final_x)/duration
-    else:
-        final_x = frame_clip.w - clip.w
-        t_factor = frame_clip.w/duration
-
+    t_factor = clip.w / duration if direction in ['left', 'right'] else clip.h / duration
+    if direction == 'left':
+        starting_pos = (clip.w + final_pos[0], final_pos[1])
+    elif direction == 'right':
+        starting_pos = (-clip.w + final_pos[0], final_pos[1])
+    elif direction == 'up':
+        starting_pos = (final_pos[0], clip.h + final_pos[1])
+    elif direction == 'down':
+        starting_pos = (final_pos[0], -clip.h + final_pos[1])
 
     def new_pos(t):
         t = min(t, duration)
-        x = max(starting_x - t * t_factor, final_x)
-        return (x, final_pos[1])
-    
+        if direction == 'left':
+            x = max(starting_pos[0] - t * t_factor, final_pos[0])
+            return (x, final_pos[1])
+        elif direction == 'right':
+            x = min(starting_pos[0] + t * t_factor, final_pos[0])
+            return (x, final_pos[1])
+        elif direction == 'up':
+            y = max(starting_pos[1] - t * t_factor, final_pos[1])
+            return (final_pos[0], y)
+        elif direction == 'down':
+            y = min(starting_pos[1] + t * t_factor, final_pos[1])
+            return (final_pos[0], y)
+
     return clip.set_pos(new_pos)
