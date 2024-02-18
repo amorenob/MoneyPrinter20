@@ -25,3 +25,5 @@ Thumbs.db
 
 # Other files
 .temp
+./Backend/temp
+./files

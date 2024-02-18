@@ -27,5 +27,7 @@ TikTokQuesAns01:
   COUNTDOWN_AUDIO: "sounds/cdw_02.mp3"
   COUNTDOWN_POSITION: ['center', 1600]
   COUNTDOWN_TIME: 4
-  VOICE: "en_us_006"
+  VOICE:
+    english: "en_us_006"
+    spanish: "es_mx_002"
 

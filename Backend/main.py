@@ -6,13 +6,14 @@ from utils import *
 from animations import *
 from sm_clips.sm_clips import FramedTextVideoClip
 from search import search_for_stock_videos, save_video
+from gpt import generate_trivia_questions
 import os
 from PIL import Image
 import yaml
 import json
 
 # Load environment variables
-load_dotenv("./.env")
+load_dotenv("../.env")
 
 # Set environment variables
 change_settings({"IMAGEMAGICK_BINARY": os.getenv("IMAGEMAGICK_BINARY")})
@@ -28,11 +29,11 @@ video_type = 'TikTokQuesAns01'
 config = config[video_type]
 bg_last_cut = 0
 # Constants
-OUTPUT_DIR = "./files"
+OUTPUT_DIR = "../files"
 TEMP_DIR = "./temp"
-RESOURCES_DIR = "./rsc"
+RESOURCES_DIR = "../rsc"
 
-def create_quest_ans_clip(question, answers, ans_id,bg_video_path):
+def create_quest_ans_clip(question, answers, ans_id, bg_video_path=None, language="english"):
     global bg_last_cut
     # get files configs
     quest_frame_fname = os.path.join(RESOURCES_DIR, config['QUEST_FRAME'])
@@ -47,7 +48,8 @@ def create_quest_ans_clip(question, answers, ans_id,bg_video_path):
     countdown_clip = countdown_clip.set_position(config['COUNTDOWN_POSITION'])
 
     # Get the set the audio for the question
-    quest_audio = get_audio_clip(question, config['VOICE'])\
+    voice = config['VOICE'][language]
+    quest_audio = get_audio_clip(question, voice)\
         .set_start(config['QUEST_EFECT']['duration'] )
 
     # Calculate question duration
@@ -139,30 +141,32 @@ def create_quest_ans_clip(question, answers, ans_id,bg_video_path):
         .set_start(question_duration-2)
 
     # Get and set audio for the correct answer
-    correct_ans_audio = get_audio_clip(f"{chr(97+ans_id)}, {answers[ans_id]}", config['VOICE'])\
+    correct_ans_audio = get_audio_clip(f"{chr(97+ans_id)}, {answers[ans_id]}", voice)\
         .set_start(question_duration-2)
     correct_ans_clip = correct_ans_clip.set_audio(correct_ans_audio)
 
-    # Create a background clip based in a image
-    #bg_filename = os.path.join(RESOURCES_DIR, config['BACKGROUND_IMAGE'])
-    #bg_clip = ImageClip(
-    #    bg_filename
-    #    ).set_duration(question_duration)
 
 
-    bg_video = VideoFileClip(bg_video_path)\
-        .loop(60)\
-        .set_audio(None)\
-        .subclip(bg_last_cut, question_duration + bg_last_cut)
-    bg_last_cut += question_duration
-    # Crop the video. video should be 1920x1080 aligned to the center
-    bg_x, bg_y = config['VIDEO_SIZE']
-    x1 = (bg_video.w - bg_x)/2
-    y1 = (bg_video.h - bg_y)/2
-    x2 = x1 + bg_x
-    y2 = y1 + bg_y
-    bg_video = bg_video.crop(x1=x1, y1=y1, x2=x2, y2=y2)
-    # deletes the audio from the video
+    # if not bg_video_path create a image based bg
+    if not bg_video_path:
+        bg_video = ImageClip(
+            os.path.join(RESOURCES_DIR, config['BACKGROUND_IMAGE'])
+            ).set_duration(question_duration)
+    else: 
+
+        bg_video = VideoFileClip(bg_video_path)\
+            .loop(60)\
+            .set_audio(None)\
+            .subclip(bg_last_cut, question_duration + bg_last_cut)
+        bg_last_cut += question_duration
+        # Crop the video. video should be 1920x1080 aligned to the center
+        bg_x, bg_y = config['VIDEO_SIZE']
+        x1 = (bg_video.w - bg_x)/2
+        y1 = (bg_video.h - bg_y)/2
+        x2 = x1 + bg_x
+        y2 = y1 + bg_y
+        bg_video = bg_video.crop(x1=x1, y1=y1, x2=x2, y2=y2)
+
     
 
     clips_list = [ bg_video,  quest_clip, ] + ans_clips + [correct_ans_clip, countdown_clip]
@@ -200,17 +204,18 @@ def get_bg_videoclip(topic, duration):
     if len(video_paths) == 0:
         return None
 
-    return video_paths
+    return video_paths[0]
 
 
-def create_trivia_clip(trivias):
+def create_trivia_clip(topic, language="english"):
 
-    bg_video_path = get_bg_videoclip("Dogs", 18)[0]
-
+    bg_video_path = get_bg_videoclip(topic, 18)
+    # generate trivia questions
+    trivias = generate_trivia_questions(topic, 5, language, "gpt4")
 
     clips = []
     for trivia in trivias:
-        clips.append(create_quest_ans_clip(trivia['question'], trivia['options'], trivia['correct_answer_index'], bg_video_path))
+        clips.append(create_quest_ans_clip(trivia['question'], trivia['options'], trivia['correct_answer_index'], bg_video_path, language))
     
     trivia_video = concatenate_videoclips(clips)
     # Add bg audio
@@ -219,23 +224,15 @@ def create_trivia_clip(trivias):
         .volumex(0.3)
 
     trivia_video = trivia_video.set_audio(CompositeAudioClip([trivia_video.audio, bg_audio]))
+    trivia_video.write_videofile(os.path.join(OUTPUT_DIR, "trivia_video.mp4"), fps=24)
 
-    return trivia_video
+    return os.path.join(OUTPUT_DIR, "trivia_video.mp4")
 
 
 if __name__ == "__main__":
 
-    # load json trivia file
-    with open('trivia.json', 'r') as trivia_file:
-        trivias = json.load(trivia_file)
     
+    composed_clip = create_trivia_clip("World capitals")
+    print(f"Trivia video: {composed_clip}")
 
-
-    composed_clip = create_trivia_clip(trivias)
-
-    #composed_clip = create_quest_ans_clip(
-    #    "¿Wich is the capital of France?", 
-    #    ["Paris", "London", "Berlin", "Madrid"],
-    #    2
-    #)
-    composed_clip.write_videofile(os.path.join(OUTPUT_DIR, "test.mp4"), fps=24)
+    
