@@ -112,3 +112,12 @@ def slide_in(clip, duration, direction='left'):
             return (final_pos[0], y)
 
     return clip.set_pos(new_pos)
+
+
+# Animations map
+animations = {
+    "fade_in": fade_in,
+    "fade_out": fade_out,
+    "slide_in": slide_in,
+    "words_effect": words_effect
+}

@@ -3,7 +3,7 @@ from moviepy.editor import TextClip, ImageClip, CompositeVideoClip
 class FramedTextVideoClip():
     """A TextClip with a frame around it."""
 
-    def __init__(self, text, frame_filename, font, fontsize, color, duration, txt_padding=None, txt_left_margin=None):
+    def __init__(self, text, frame_filename, font, fontsize, color, duration, frame_opacity=1, txt_padding=None, txt_left_margin=None):
         self.text = text
         self.frame_filename = frame_filename
         self.font = font
@@ -12,6 +12,7 @@ class FramedTextVideoClip():
         self.duration = duration
         self.frame_clip = None
         self.text_clip = None
+        self.frame_opacity = frame_opacity
         self.txt_left_margin = txt_left_margin
         self.txt_padding = txt_padding
 
@@ -28,7 +29,10 @@ class FramedTextVideoClip():
         # 5. A composite clip with all the clips
 
         # Create a frame clip
-        self.frame_clip = ImageClip(self.frame_filename, duration=self.duration)
+        self.frame_clip = ImageClip(
+            self.frame_filename, 
+            duration=self.duration,
+        ).set_opacity(self.frame_opacity)
 
         # Ser the size of the text clip
         if self.txt_padding is not None:
@@ -36,14 +40,17 @@ class FramedTextVideoClip():
         else:
             txt_size = self.frame_clip.size
         
-        txt_pos = ('center', 'center')
+        # Set center by default
+        pos_x = (self.frame_clip.w - txt_size[0])/2
+        pos_y = (self.frame_clip.h - txt_size[1])/2
+        txt_pos = (pos_x, pos_y)
+        txt_align = 'center'
 
+        # Set left margin if it is defined
         if self.txt_left_margin is not None:
             txt_align = 'west'
             txt_pos = (self.txt_left_margin, 'center')
             txt_size = (txt_size[0] - self.txt_left_margin, txt_size[1])
-        else:
-            txt_align = 'center'
 
 
         # Create a text clip
@@ -58,10 +65,15 @@ class FramedTextVideoClip():
             method="caption",
         ).set_duration(self.duration).set_position(txt_pos)
 
+
+
         return None
 
     def apply_txt_effect(self, effect_function, *args, **kwargs):
-        self.text_clip = effect_function(self.text_clip, self.frame_clip, *args, **kwargs)
+        self.text_clip = effect_function(self.text_clip, *args, **kwargs)
+
+    def apply_frame_effect(self, effect_function, *args, **kwargs):
+        self.frame_clip = effect_function(self.frame_clip, *args, **kwargs)
 
     def get_composed_clip(self):
         # Create a composite clip with the frame and the text

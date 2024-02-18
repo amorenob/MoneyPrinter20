@@ -1,22 +1,31 @@
 TikTokQuesAns01:
   VIDEO_SIZE: [1080, 1920]
   VIDEO_DURATION: 10
-  QUEST_DURATION: 10
+  QUEST_DURATION: 14
   BACKGROUND_IMAGE: "backgrounds/bg_01.jpg"
   BACKGROUND_AUDIO: "sounds/80s-mystical-stranger-things-133254.mp3"
   TOP_MARGIN: 100
   QUEST_FRAME: "frames/question_frame_01.png"
   QUEST_PADDING: 80
+  QUEST_EFECT: 
+    effect_function: "slide_in"
+    direction: "left"
+    duration: 0.3
   ANS_FRAME: "frames/ans_frame_03.png"
   ANS_FRAME_OPACITY: 0.7
   ANS_PADDING: 40
   ANS_LEFT_MARGIN: 140
   ANS_START_TIME: 0.5
+  CORRECT_ANS:
+    color: "white"
+    duration: 1.5
   FONT: "NimbusRoman-BoldItalic"
   FONT_SIZE: 80
   FONT_COLOR: "white"
-  HIGHLIGHT_COLOR: "white"
-  COUNTDOWN_FILE: "countdowns/rot_countdown2.mp4"
+  HIGHLIGHT_COLOR: "yellow"
+  COUNTDOWN_FILE: "countdowns/cdw_01.mp4"
+  COUNTDOWN_AUDIO: "sounds/cdw_02.mp3"
   COUNTDOWN_POSITION: ['center', 1600]
+  COUNTDOWN_TIME: 4
   VOICE: "en_us_006"
 

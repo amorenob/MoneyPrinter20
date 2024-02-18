@@ -1,4 +1,4 @@
-from moviepy.editor import TextClip, CompositeVideoClip, ImageClip, VideoFileClip
+from moviepy.editor import CompositeVideoClip, ImageClip, VideoFileClip
 from moviepy.config import change_settings
 from tiktokvoice import tts
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ from search import search_for_stock_videos, save_video
 import os
 from PIL import Image
 import yaml
-import time
+import json
 
 # Load environment variables
 load_dotenv("./.env")
@@ -26,48 +26,69 @@ with open('videos_config.yaml', 'r') as config_file:
 
 video_type = 'TikTokQuesAns01'
 config = config[video_type]
-
+bg_last_cut = 0
 # Constants
 OUTPUT_DIR = "./files"
 TEMP_DIR = "./temp"
 RESOURCES_DIR = "./rsc"
 
-def create_quest_ans_clip(question, answers, ans_id):
-
+def create_quest_ans_clip(question, answers, ans_id,bg_video_path):
+    global bg_last_cut
     # get files configs
     quest_frame_fname = os.path.join(RESOURCES_DIR, config['QUEST_FRAME'])
     ans_frame_fname = os.path.join(RESOURCES_DIR, config['ANS_FRAME'])
+    countdown_video_fname = os.path.join(RESOURCES_DIR, config['COUNTDOWN_FILE'])
+    countdown_audio_fname = os.path.join(RESOURCES_DIR, config['COUNTDOWN_AUDIO'])
 
-    # Create a background clip based in a image
-    bg_filename = os.path.join(RESOURCES_DIR, config['BACKGROUND_IMAGE'])
-    bg_clip = ImageClip(
-        bg_filename
-        ).set_duration(config['QUEST_DURATION'])
 
-    # Add bg audio
-    bg_audio = AudioFileClip(os.path.join(RESOURCES_DIR, config['BACKGROUND_AUDIO']))\
-        .subclip(5, config['QUEST_DURATION']+5)
-    bg_clip = bg_clip.set_audio(bg_audio)
+    # Create countdown from video clip
+    countdown_clip = VideoFileClip(countdown_video_fname)\
+        .subclip(6-config['COUNTDOWN_TIME'])
+    countdown_clip = countdown_clip.set_position(config['COUNTDOWN_POSITION'])
 
-    bg_video = get_bg_videoclip(question, config['QUEST_DURATION'])
+    # Get the set the audio for the question
+    quest_audio = get_audio_clip(question, config['VOICE'])\
+        .set_start(config['QUEST_EFECT']['duration'] )
 
+    # Calculate question duration
+    question_duration = \
+        config['QUEST_EFECT']['duration'] + quest_audio.duration +\
+        countdown_clip.duration + config['CORRECT_ANS']['duration'] 
+    
+    print(f"Question duration: {question_duration}")
     quest_clip = FramedTextVideoClip(
         question, 
         frame_filename=quest_frame_fname, 
         font=config['FONT'], 
         fontsize=config['FONT_SIZE'], 
         color=config['FONT_COLOR'], 
-        duration=config['QUEST_DURATION'], 
+        duration=question_duration, 
         txt_padding=config['QUEST_PADDING'], 
     )
-    quest_clip.apply_txt_effect(slide_in, direction='left', duration=0.3)
+
+    # Apply opening effect to the question
+    quest_clip.apply_txt_effect(
+        animations[config['QUEST_EFECT']['effect_function']],
+        direction=config['QUEST_EFECT']['direction'],
+        duration=config['QUEST_EFECT']['duration']
+    )
+    quest_clip.apply_frame_effect(
+        animations[config['QUEST_EFECT']['effect_function']],
+        direction='down',
+        duration=config['QUEST_EFECT']['duration']
+    )
+
     quest_clip = quest_clip.get_composed_clip().set_position(('center', config['TOP_MARGIN']))
-
-
-    # Get the set the audio for the question
-    quest_audio = get_audio_clip(question, config['VOICE']).set_start(0.3)
     # Add the audio to the question clip
     quest_clip = quest_clip.set_audio(quest_audio)
+
+    # Add sound to the countdown
+    countdown_audio = AudioFileClip(countdown_audio_fname)\
+        .set_start(quest_audio.duration + config['QUEST_EFECT']['duration'] - 0.5)\
+        .subclip(0, countdown_clip.duration)
+    countdown_clip = countdown_clip\
+        .set_start(quest_audio.duration + config['QUEST_EFECT']['duration'] - 0.5)\
+        .set_audio(countdown_audio)
 
     # Position the question at the top
     current_height = quest_clip.pos(0)[1] + quest_clip.size[1] + config['ANS_PADDING']
@@ -81,14 +102,14 @@ def create_quest_ans_clip(question, answers, ans_id):
             font=config['FONT'], 
             fontsize=config['FONT_SIZE'], 
             color=config['FONT_COLOR'], 
-            duration=config['QUEST_DURATION']-config['ANS_START_TIME']-1,
+            duration=question_duration-config['ANS_START_TIME']-1,
             frame_opacity=config['ANS_FRAME_OPACITY'],
             txt_left_margin=config['ANS_LEFT_MARGIN'], 
         ))
         # Apply the effect to the answer
         ans_clips[i].apply_txt_effect(words_effect, 'cascade', duration=1)
-        ans_clips[i].apply_txt_effect(fade_out, duration=1)
-        ans_clips[i].apply_frame_effect(fade_out, duration=1)
+        ans_clips[i].apply_txt_effect(fade_out, duration=0.5)
+        ans_clips[i].apply_frame_effect(fade_out, duration=0.5)
 
         # Set the position of each answer 
         ans_clips[i] = ans_clips[i]\
@@ -97,12 +118,6 @@ def create_quest_ans_clip(question, answers, ans_id):
             .set_start(config['ANS_START_TIME'])
         current_height += ans_clips[i].size[1] + config['ANS_PADDING']
 
-    # Create countdown from video clip
-    countdown_clip = VideoFileClip(
-        os.path.join(RESOURCES_DIR, config['COUNTDOWN_FILE'])
-        ).set_duration(5).set_start(config['QUEST_DURATION']-5)
-    countdown_clip = countdown_clip.set_position(config['COUNTDOWN_POSITION'])
-
     # Create a new higlited clip with a diferent color for the correct answer
     correct_ans_clip = FramedTextVideoClip(
         f"({chr(65+ans_id)}) {answers[ans_id]}", 
@@ -110,7 +125,7 @@ def create_quest_ans_clip(question, answers, ans_id):
         font=config['FONT'], 
         fontsize=config['FONT_SIZE'], 
         color=config['HIGHLIGHT_COLOR'], 
-        duration=2, 
+        duration=config['CORRECT_ANS']['duration'], 
         frame_opacity=config['ANS_FRAME_OPACITY'],
         txt_left_margin=config['ANS_LEFT_MARGIN'], 
     )
@@ -121,15 +136,37 @@ def create_quest_ans_clip(question, answers, ans_id):
     correct_ans_clip = correct_ans_clip\
         .get_composed_clip()\
         .set_position(('center', ans_clips[ans_id].pos(2)[1]))\
-        .set_start(config['QUEST_DURATION']-2)
+        .set_start(question_duration-2)
 
     # Get and set audio for the correct answer
     correct_ans_audio = get_audio_clip(f"{chr(97+ans_id)}, {answers[ans_id]}", config['VOICE'])\
-        .set_start(config['QUEST_DURATION']-2)
+        .set_start(question_duration-2)
     correct_ans_clip = correct_ans_clip.set_audio(correct_ans_audio)
 
+    # Create a background clip based in a image
+    #bg_filename = os.path.join(RESOURCES_DIR, config['BACKGROUND_IMAGE'])
+    #bg_clip = ImageClip(
+    #    bg_filename
+    #    ).set_duration(question_duration)
+
+
+    bg_video = VideoFileClip(bg_video_path)\
+        .loop(60)\
+        .set_audio(None)\
+        .subclip(bg_last_cut, question_duration + bg_last_cut)
+    bg_last_cut += question_duration
+    # Crop the video. video should be 1920x1080 aligned to the center
+    bg_x, bg_y = config['VIDEO_SIZE']
+    x1 = (bg_video.w - bg_x)/2
+    y1 = (bg_video.h - bg_y)/2
+    x2 = x1 + bg_x
+    y2 = y1 + bg_y
+    bg_video = bg_video.crop(x1=x1, y1=y1, x2=x2, y2=y2)
+    # deletes the audio from the video
+    
+
     clips_list = [ bg_video,  quest_clip, ] + ans_clips + [correct_ans_clip, countdown_clip]
-    return CompositeVideoClip(clips_list).set_duration(config['QUEST_DURATION'])
+    return CompositeVideoClip(clips_list).set_duration(question_duration)
 
 def get_audio_clip(text, voice):
     filename = os.path.join(TEMP_DIR, "audio.mp3")
@@ -137,14 +174,13 @@ def get_audio_clip(text, voice):
     return AudioFileClip(filename)
 
 
+def get_bg_videoclip(topic, duration):
 
-def get_bg_videoclip(question, duration):
-    search_term = "Capital cities"
     # Search for a video of the given search term
     video_urls = []
     # Search for a video
     found_urls = search_for_stock_videos(
-        search_term, os.getenv("PEXELS_API_KEY"), 10, duration, config['VIDEO_SIZE']
+        topic, os.getenv("PEXELS_API_KEY"), 10, duration, config['VIDEO_SIZE']
     )
     # Check for duplicates
     for url in found_urls:
@@ -163,24 +199,43 @@ def get_bg_videoclip(question, duration):
             print("Error saving video")
     if len(video_paths) == 0:
         return None
-    bg_x, bg_y = config['VIDEO_SIZE']
-    bg_video = VideoFileClip(video_paths[0])\
-        .subclip(0, duration)
 
-    # Crop the video. video should be 1920x1080 aligned to the center
-    x1 = (bg_video.w - bg_x)/2
-    y1 = (bg_video.h - bg_y)/2
-    x2 = x1 + bg_x
-    y2 = y1 + bg_y
-    bg_video = bg_video.crop(x1=x1, y1=y1, x2=x2, y2=y2)
-    return bg_video
+    return video_paths
 
+
+def create_trivia_clip(trivias):
+
+    bg_video_path = get_bg_videoclip("Dogs", 18)[0]
+
+
+    clips = []
+    for trivia in trivias:
+        clips.append(create_quest_ans_clip(trivia['question'], trivia['options'], trivia['correct_answer_index'], bg_video_path))
+    
+    trivia_video = concatenate_videoclips(clips)
+    # Add bg audio
+    bg_audio = AudioFileClip(os.path.join(RESOURCES_DIR, config['BACKGROUND_AUDIO']))\
+        .subclip(5, trivia_video.duration+5)\
+        .volumex(0.3)
+
+    trivia_video = trivia_video.set_audio(CompositeAudioClip([trivia_video.audio, bg_audio]))
+
+    return trivia_video
 
 
 if __name__ == "__main__":
-    composed_clip = create_quest_ans_clip(
-        "¿Wich is the capital of France?", 
-        ["Paris", "London", "Berlin", "Madrid"],
-        2
-    )
+
+    # load json trivia file
+    with open('trivia.json', 'r') as trivia_file:
+        trivias = json.load(trivia_file)
+    
+
+
+    composed_clip = create_trivia_clip(trivias)
+
+    #composed_clip = create_quest_ans_clip(
+    #    "¿Wich is the capital of France?", 
+    #    ["Paris", "London", "Berlin", "Madrid"],
+    #    2
+    #)
     composed_clip.write_videofile(os.path.join(OUTPUT_DIR, "test.mp4"), fps=24)
