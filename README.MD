@@ -1,6 +1,6 @@
-# Automatic TikTok Trivia Videos
+# Automatic Trivia Videos
 
-Automatic TikTok Trivia Videos is an innovative project designed to streamline the creation of trivia content for TikTok. Leveraging advanced scripting and video editing techniques, this tool automates the process of generating engaging trivia videos, making it easier for creators to produce and share knowledge-based content on the platform.
+Automatic Trivia Videos is a tool that uses large language models (LLMs) to help you create trivia content for TikTok. It automatically generates questions, answers, and scripts, then turns them into ready-to-post videos—making trivia video creation fast and easy.
 
 ## Features
 
