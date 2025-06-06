@@ -16,8 +16,7 @@ Automatic Trivia Videos is a tool that uses large language models (LLMs) to help
 
 - Python 3.8 or higher
 - MoviePy
-- GTTS (Google Text-to-Speech) for voice-over generation
-- A TikTok account for uploading content
+- TikTok-Voice-TTS for voice-over generation
 
 ### Installation
 
