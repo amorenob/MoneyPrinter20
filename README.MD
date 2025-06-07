@@ -2,6 +2,8 @@
 
 Automatic Trivia Videos is a tool that uses large language models (LLMs) to help you create trivia content for Video social media. It automatically generates questions, answers, and scripts, then turns them into ready-to-post videos—making trivia video creation fast and easy.
 
+[![Ver el tutorial en YouTube](assets/Trivia_mountains.png)](https://www.youtube.com/shorts/vb0aJXJYl84)
+
 ## Features
 
 - **Dynamic Trivia Generation**: Automatically assembles trivia questions and answers into a visually appealing video format.
@@ -18,8 +20,3 @@ Automatic Trivia Videos is a tool that uses large language models (LLMs) to help
 - MoviePy
 - TikTok-Voice-TTS for voice-over generation
 
-### Installation
-
-1. Clone the repository to your local machine:
-   ```bash
-   git clone https://github.com/xxxx
